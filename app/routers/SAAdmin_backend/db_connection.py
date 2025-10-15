@@ -2,50 +2,18 @@ import psycopg2
 from psycopg2 import sql
 import hashlib
 import os
-from urllib.parse import urlparse
-import urllib.parse
-
 
 class DatabaseManager:
     def __init__(self):
-        self.db_url = os.environ.get("DATABASE_URL")
-
-        if not self.db_url:
-            # fallback for local testing
-            self.db_config = {
-                "dbname": "SmartSurveillanceSystem",
-                "user": "postgres",
-                "password": "123",
-                "host": "localhost",
-                "port": "5432"
-            }
-        else:
-            # parse DATABASE_URL
-            result = urlparse(self.db_url)
-            self.db_config = {
-                "dbname": result.path[1:],
-                "user": result.username,
-                "password": result.password,
-                "host": result.hostname,
-                "port": result.port
-            }
-
         self.init_database()
 
     def get_connection(self):
         database_url = os.environ.get("DATABASE_URL")
         if database_url:
-            # Parse DATABASE_URL if needed
-            result = urllib.parse.urlparse(database_url)
-            return psycopg2.connect(
-                dbname=result.path[1:],
-                user=result.username,
-                password=result.password,
-                host=result.hostname,
-                port=result.port
-            )
+            # Connect directly using DATABASE_URL
+            return psycopg2.connect(database_url)
         else:
-            # fallback (local)
+            # Local fallback
             return psycopg2.connect(
                 dbname=os.environ.get("DB_NAME", "SmartSurveillanceSystem"),
                 user=os.environ.get("DB_USER", "postgres"),
@@ -58,6 +26,7 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
 
+        # Admin users table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS admin_users (
                 id SERIAL PRIMARY KEY,
@@ -71,6 +40,7 @@ class DatabaseManager:
             )
         ''')
 
+        # Superadmin users table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS superadmin_users (
                 id SERIAL PRIMARY KEY,
@@ -85,6 +55,7 @@ class DatabaseManager:
             )
         ''')
 
+        # Password reset tokens table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS password_reset_tokens (
                 id SERIAL PRIMARY KEY,
@@ -97,7 +68,9 @@ class DatabaseManager:
             )
         ''')
 
+        # Insert default users
         self.create_default_users(cursor)
+
         conn.commit()
         conn.close()
 
@@ -119,6 +92,7 @@ class DatabaseManager:
     def hash_password(self, password):
         return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
+    # Admin login verification
     def verify_admin_login(self, email, password):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -134,6 +108,7 @@ class DatabaseManager:
         conn.close()
         return result
 
+    # Superadmin login verification
     def verify_superadmin_login(self, email, password):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -149,6 +124,7 @@ class DatabaseManager:
         conn.close()
         return result
 
+    # Register new admin
     def register_admin(self, email, password, full_name, photo="policeman.png"):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -166,6 +142,7 @@ class DatabaseManager:
             conn.close()
         return success
 
+    # Register new superadmin
     def register_superadmin(self, email, password, full_name, admin_key, photo="policeman.png"):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -183,6 +160,7 @@ class DatabaseManager:
             conn.close()
         return success
 
+    # Update password
     def update_password(self, email, new_password, user_type):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -196,6 +174,7 @@ class DatabaseManager:
         conn.close()
         return success
 
+    # Get user counts
     def get_user_stats(self):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -206,5 +185,5 @@ class DatabaseManager:
         conn.close()
         return {"admin_count": admin_count, "superadmin_count": superadmin_count}
 
-
+# Create a single instance to use across your app
 db_manager = DatabaseManager()
