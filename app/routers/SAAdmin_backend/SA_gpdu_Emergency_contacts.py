@@ -6,12 +6,16 @@ from app.routers.SAAdmin_backend.Admin_Notification_get import add_admin_notific
 router = APIRouter()
 
 def get_db_conn():
-    return psycopg2.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        dbname=os.environ.get("DB_NAME", "SmartSurveillanceSystem"),
-        user=os.environ.get("DB_USER", "postgres"),
-        password=os.environ.get("DB_PASS", "123")
-    )
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        return psycopg2.connect(database_url)
+    else:
+        return psycopg2.connect(
+            host="localhost",
+            dbname="SmartSurveillanceSystem",
+            user="postgres",
+            password="123"
+        )
 
 @router.post("/superadmin/emergency_contact/add")
 def add_emergency_contact(name: str, phone: str, role: str, address: str, is_active: bool = True):

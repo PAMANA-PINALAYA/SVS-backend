@@ -5,13 +5,16 @@ import os
 router = APIRouter()
 
 def get_db_conn():
-    return psycopg2.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        dbname=os.environ.get("DB_NAME", "SmartSurveillanceSystem"),
-        user=os.environ.get("DB_USER", "postgres"),
-        password=os.environ.get("DB_PASS", "123")
-    )
-
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        return psycopg2.connect(database_url)
+    else:
+        return psycopg2.connect(
+            host="localhost",
+            dbname="SmartSurveillanceSystem",
+            user="postgres",
+            password="123"
+        )
 @router.get("/admin/emergency_contacts")
 def get_emergency_contacts():
     conn = get_db_conn()
