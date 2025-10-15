@@ -24,13 +24,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Include responder backend router
+# Include responder backend router with prefix
 from app.routers.responder_backend.responder_main import router as responder_router
-app.include_router(responder_router)
+app.include_router(responder_router, prefix="/responder")
 
-# Include SAAdmin backend main router
+# Include SAAdmin backend main router (add prefix if needed)
 from app.routers.SAAdmin_backend.SAAdmin_main import router as saadmin_router
-app.include_router(saadmin_router)
+app.include_router(saadmin_router, prefix="/saadmin")
 
 # Dependency for DB session
 def get_db():
