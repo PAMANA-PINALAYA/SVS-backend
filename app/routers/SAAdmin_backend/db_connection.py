@@ -3,6 +3,7 @@ from psycopg2 import sql
 import hashlib
 import os
 from urllib.parse import urlparse
+import urllib.parse
 
 
 class DatabaseManager:
@@ -32,7 +33,26 @@ class DatabaseManager:
         self.init_database()
 
     def get_connection(self):
-        return psycopg2.connect(**self.db_config)
+        database_url = os.environ.get("DATABASE_URL")
+        if database_url:
+            # Parse DATABASE_URL if needed
+            result = urllib.parse.urlparse(database_url)
+            return psycopg2.connect(
+                dbname=result.path[1:],
+                user=result.username,
+                password=result.password,
+                host=result.hostname,
+                port=result.port
+            )
+        else:
+            # fallback (local)
+            return psycopg2.connect(
+                dbname=os.environ.get("DB_NAME", "SmartSurveillanceSystem"),
+                user=os.environ.get("DB_USER", "postgres"),
+                password=os.environ.get("DB_PASS", "123"),
+                host=os.environ.get("DB_HOST", "localhost"),
+                port=os.environ.get("DB_PORT", "5432")
+            )
 
     def init_database(self):
         conn = self.get_connection()
