@@ -1,2 +1,2 @@
 import hashlib
-print(hashlib.sha256("testpass".encode("utf-8")).hexdigest())
+print(hashlib.sha256("adminpass".encode("utf-8")).hexdigest())
