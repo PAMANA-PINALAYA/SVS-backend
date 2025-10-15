@@ -1,48 +1,43 @@
 import psycopg2
 from psycopg2 import sql
-from psycopg2.extras import RealDictCursor
 import hashlib
 import os
+from urllib.parse import urlparse
+
 
 class DatabaseManager:
     def __init__(self):
-        self.db_config = {
-            "dbname": "SmartSurveillanceSystem",
-            "user": "postgres",
-            "password": "123",
-            "host": "localhost",
-            "port": "5432"
-        }
+        self.db_url = os.environ.get("DATABASE_URL")
+
+        if not self.db_url:
+            # fallback for local testing
+            self.db_config = {
+                "dbname": "SmartSurveillanceSystem",
+                "user": "postgres",
+                "password": "123",
+                "host": "localhost",
+                "port": "5432"
+            }
+        else:
+            # parse DATABASE_URL
+            result = urlparse(self.db_url)
+            self.db_config = {
+                "dbname": result.path[1:],
+                "user": result.username,
+                "password": result.password,
+                "host": result.hostname,
+                "port": result.port
+            }
+
         self.init_database()
 
-    def get_admin_info(self, email):
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT id, full_name, photo FROM admin_users WHERE email = %s AND is_active = TRUE
-        ''', (email,))
-        result = cursor.fetchone()
-        conn.close()
-        if result:
-            return {"id": result[0], "full_name": result[1], "photo": result[2]}
-        else:
-            return {"id": None, "full_name": "Unknown", "photo": "policeman.png"}
-            
     def get_connection(self):
-        import psycopg2
-        import os
-        return psycopg2.connect(
-            host=os.environ.get("DB_HOST", "localhost"),
-            dbname=os.environ.get("DB_NAME", "SmartSurveillanceSystem"),
-            user=os.environ.get("DB_USER", "postgres"),
-            password=os.environ.get("DB_PASS", "123")
-        )
+        return psycopg2.connect(**self.db_config)
 
     def init_database(self):
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        # Create admin users table with photo
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS admin_users (
                 id SERIAL PRIMARY KEY,
@@ -56,7 +51,6 @@ class DatabaseManager:
             )
         ''')
 
-        # Create superadmin users table with photo
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS superadmin_users (
                 id SERIAL PRIMARY KEY,
@@ -69,9 +63,8 @@ class DatabaseManager:
                 last_login TIMESTAMP,
                 is_active BOOLEAN DEFAULT TRUE
             )
-        ''')    
+        ''')
 
-        # Create password reset tokens table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS password_reset_tokens (
                 id SERIAL PRIMARY KEY,
@@ -109,31 +102,29 @@ class DatabaseManager:
     def verify_admin_login(self, email, password):
         conn = self.get_connection()
         cursor = conn.cursor()
-        hashed_password = self.hash_password(password)
-        cursor.execute("""
+        hashed = self.hash_password(password)
+        cursor.execute('''
             SELECT id, full_name, photo FROM admin_users
             WHERE email = %s AND password = %s AND is_active = TRUE
-        """, (email.strip(), hashed_password))
+        ''', (email.strip(), hashed))
         result = cursor.fetchone()
         if result:
-            cursor.execute("UPDATE admin_users SET last_login = NOW() WHERE id = %s", (result[0],))
+            cursor.execute('UPDATE admin_users SET last_login = NOW() WHERE id = %s', (result[0],))
             conn.commit()
         conn.close()
         return result
-    
+
     def verify_superadmin_login(self, email, password):
         conn = self.get_connection()
         cursor = conn.cursor()
-        hashed_password = self.hash_password(password)
+        hashed = self.hash_password(password)
         cursor.execute('''
-            SELECT id, full_name, photo FROM superadmin_users 
+            SELECT id, full_name, photo FROM superadmin_users
             WHERE email = %s AND password = %s AND is_active = TRUE
-        ''', (email, hashed_password))
+        ''', (email, hashed))
         result = cursor.fetchone()
         if result:
-            cursor.execute('''
-                UPDATE superadmin_users SET last_login = CURRENT_TIMESTAMP WHERE email = %s
-            ''', (email,))
+            cursor.execute('UPDATE superadmin_users SET last_login = NOW() WHERE email = %s', (email,))
             conn.commit()
         conn.close()
         return result
@@ -142,11 +133,11 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
-            hashed_password = self.hash_password(password)
+            hashed = self.hash_password(password)
             cursor.execute('''
                 INSERT INTO admin_users (email, password, full_name, photo)
                 VALUES (%s, %s, %s, %s)
-            ''', (email, hashed_password, full_name, photo))
+            ''', (email, hashed, full_name, photo))
             conn.commit()
             success = True
         except psycopg2.Error:
@@ -159,11 +150,11 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
-            hashed_password = self.hash_password(password)
+            hashed = self.hash_password(password)
             cursor.execute('''
                 INSERT INTO superadmin_users (email, password, full_name, admin_key, photo)
                 VALUES (%s, %s, %s, %s, %s)
-            ''', (email, hashed_password, full_name, admin_key, photo))
+            ''', (email, hashed, full_name, admin_key, photo))
             conn.commit()
             success = True
         except psycopg2.Error:
@@ -175,11 +166,11 @@ class DatabaseManager:
     def update_password(self, email, new_password, user_type):
         conn = self.get_connection()
         cursor = conn.cursor()
-        hashed_password = self.hash_password(new_password)
+        hashed = self.hash_password(new_password)
         table = "admin_users" if user_type == "admin" else "superadmin_users"
         cursor.execute(sql.SQL('''
             UPDATE {} SET password = %s WHERE email = %s
-        ''').format(sql.Identifier(table)), (hashed_password, email))
+        ''').format(sql.Identifier(table)), (hashed, email))
         success = cursor.rowcount > 0
         conn.commit()
         conn.close()
@@ -195,5 +186,5 @@ class DatabaseManager:
         conn.close()
         return {"admin_count": admin_count, "superadmin_count": superadmin_count}
 
-    
+
 db_manager = DatabaseManager()
