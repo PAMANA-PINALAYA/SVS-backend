@@ -2,19 +2,15 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import psycopg2
 import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from app.routers.SAAdmin_backend.Admin_Notification_get import add_admin_notification
 import hashlib
+
 def hash_password(password):
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-
-DEFAULT_PROFILE_IMAGE = "profile.png"
-DB_HOST = "localhost"
-DB_NAME = "SmartSurveillanceSystem"
-DB_USER = "postgres"
-DB_PASS = "123"
+DB_HOST = os.environ.get("DB_HOST", "localhost")
+DB_NAME = os.environ.get("DB_NAME", "SmartSurveillanceSystem")
+DB_USER = os.environ.get("DB_USER", "postgres")
+DB_PASS = os.environ.get("DB_PASS", "123")
 
 router = APIRouter()
 
@@ -71,7 +67,6 @@ def submit_registration(data: RegistrationModel):
         )
         pending_id = cursor.fetchone()[0]
         conn.commit()
-        # Optionally notify admin here
         return {
             "success": True,
             "message": "Registration submitted successfully. Your account is pending admin approval."

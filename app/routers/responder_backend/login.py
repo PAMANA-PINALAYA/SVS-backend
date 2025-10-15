@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 import psycopg2
-import os
 import hashlib
+import os
 
 router = APIRouter()
 
@@ -41,7 +41,7 @@ async def login_responder(request: Request):
 
         if not user:
             return JSONResponse(
-                content={"success": False, "detail": "Invalid username or password"},
+                content={"success": False, "detail": "Invalid username or password."},
                 status_code=401
             )
 
@@ -50,7 +50,7 @@ async def login_responder(request: Request):
         # Compare hashed password
         if db_password != hash_password(password):
             return JSONResponse(
-                content={"success": False, "detail": "Invalid username or password"},
+                content={"success": False, "detail": "Invalid username or password."},
                 status_code=401
             )
 
@@ -58,7 +58,7 @@ async def login_responder(request: Request):
 
         if not (approved and is_active and status_clean == "approved"):
             return JSONResponse(
-                content={"success": False, "detail": "Account not approved or active.", "status": status_clean},
+                content={"success": False, "detail": "Account not approved or inactive.", "status": status_clean},
                 status_code=403
             )
 
@@ -75,26 +75,6 @@ async def login_responder(request: Request):
             "status": "approved"
         })
 
-    finally:
-        cursor.close()
-        conn.close()
-
-@router.post("/logout_responder")
-async def logout_responder(request: Request):
-    data = await request.json()
-    responder_id = data.get("responder_id")
-    if not responder_id:
-        return JSONResponse(
-            content={"success": False, "detail": "Responder ID required"},
-            status_code=400
-        )
-    conn = get_db_conn()
-    cursor = conn.cursor()
-    try:
-        # Update last_logout to NOW()
-        cursor.execute("UPDATE responders SET last_logout = NOW() WHERE id = %s", (responder_id,))
-        conn.commit()
-        return JSONResponse(content={"success": True, "message": "Logged out and last_logout updated."})
     finally:
         cursor.close()
         conn.close()

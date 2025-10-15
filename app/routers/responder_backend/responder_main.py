@@ -1,64 +1,7 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from app.routers.responder_backend.config import get_db_conn
+from fastapi import APIRouter
 
-# Create the main router for responder backend
 router = APIRouter()
 
-
-# --- Direct Endpoints (login/register) ---
-
-class ResponderLogin(BaseModel):
-    username: str
-    password: str
-
-@router.post("/login_responder")
-def login_responder(data: ResponderLogin):
-    conn = get_db_conn()
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "SELECT id, full_name FROM responders WHERE username=%s AND password=%s",
-            (data.username, data.password)
-        )
-        user = cursor.fetchone()
-        if user:
-            return {"success": True, "responder_id": user[0], "full_name": user[1]}
-        else:
-            return {"success": False, "message": "Invalid username or password."}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-class ResponderRegister(BaseModel):
-    full_name: str
-    email: str
-    phone: str
-    username: str
-    password: str
-    role: str = "Responder"
-
-@router.post("/register_responder")
-def register_responder(data: ResponderRegister):
-    conn = get_db_conn()
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO responders (full_name, email, phone, username, password, role) VALUES (%s, %s, %s, %s, %s, %s)",
-            (data.full_name, data.email, data.phone, data.username, data.password, data.role)
-        )
-        conn.commit()
-        return {"success": True, "message": "Responder registered successfully."}
-    except Exception as e:
-        conn.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-# --- Include all sub-routers ---
 from app.routers.responder_backend.profile_update_details import router as profile_update_router
 from app.routers.responder_backend.profile_get_details import router as profile_get_router
 from app.routers.responder_backend.responder_submit_report import router as submit_router
@@ -83,7 +26,6 @@ from app.routers.responder_backend.settings_update_profile import router as upda
 from app.routers.responder_backend.settings_update_password import router as update_password_router
 from app.routers.responder_backend.conversation_api import router as conversation_router
 
-# Attach all routers to the main responder router
 router.include_router(profile_update_router)
 router.include_router(profile_get_router)
 router.include_router(submit_router)
