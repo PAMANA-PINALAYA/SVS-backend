@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from app.routers.responder_backend.config import get_db_conn
 
 # Create the main router for responder backend
-router = APIRouter(prefix="/responder")
+router = APIRouter()
 
 
 # --- Direct Endpoints (login/register) ---
