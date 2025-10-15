@@ -22,6 +22,11 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+@router.get("/superadmin/roles")
+def get_superadmin_roles():
+    # Return the roles you want to support
+    return ["admin", "responder", "superadmin"]
+    
 @router.post("/superadmin/login")
 def superadmin_login(data: LoginRequest):
     print("Login endpoint hit with:", data.email)
