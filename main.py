@@ -40,8 +40,15 @@ def get_db():
     finally:
         db.close()
 
-# Mount static directories (adjust paths as needed)
+# Mount static directories
 ROUTER_DIR = os.path.join(os.path.dirname(__file__), "app", "routers", "responder_backend")
+
+# Ensure static directories exist before mounting
+for folder in ["patrol_photos", "uploaded_profile_picture", "gallery_photos", "uploaded_photos", "message_images"]:
+    path = os.path.join(ROUTER_DIR, folder)
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 app.mount("/patrol_photos", StaticFiles(directory=os.path.join(ROUTER_DIR, "patrol_photos")), name="patrol_photos")
 app.mount("/profile_pictures", StaticFiles(directory=os.path.join(ROUTER_DIR, "uploaded_profile_picture")), name="profile_pictures")
 app.mount("/gallery_photos", StaticFiles(directory=os.path.join(ROUTER_DIR, "gallery_photos")), name="gallery_photos")
@@ -49,8 +56,13 @@ app.mount("/uploaded_photos", StaticFiles(directory=os.path.join(ROUTER_DIR, "up
 app.mount("/message_images", StaticFiles(directory=os.path.join(ROUTER_DIR, "message_images")), name="message_images")
 app.mount("/uploaded_profile_picture", StaticFiles(directory=os.path.join(ROUTER_DIR, "uploaded_profile_picture")), name="uploaded_profile_picture")
 
+# Root route for testing
+@app.get("/")
+def root():
+    return {"message": "Smart Surveillance System API is running!"}
+
 # Run with correct port on Render
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 10000))  # Render sets PORT
+    port = int(os.environ.get("PORT", 10000))  # Render sets PORT automatically
     uvicorn.run(app, host="0.0.0.0", port=port)
