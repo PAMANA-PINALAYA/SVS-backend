@@ -18,35 +18,40 @@ def get_db_conn():
         )
 
 @router.get("/admin/camera_alerts")
-def get_camera_alerts(camera_name: str = Query(None), limit: int = Query(10)):
+def get_camera_alerts():
     conn = get_db_conn()
     cursor = conn.cursor()
     try:
-        if camera_name:
-            cursor.execute("""
-                SELECT camera_name, alert_type, description, timestamp
-                FROM camera_alerts 
-                WHERE camera_name = %s
-                ORDER BY timestamp DESC 
-                LIMIT %s
-            """, (camera_name, limit))
-        else:
-            cursor.execute("""
-                SELECT camera_name, alert_type, description, timestamp
-                FROM camera_alerts 
-                ORDER BY timestamp DESC 
-                LIMIT %s
-            """, (limit,))
-        rows = cursor.fetchall()
-        return [
-            {
-                "camera_name": row[0],
-                "alert_type": row[1],
-                "description": row[2],
-                "timestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else ""
-            }
-            for row in rows
-        ]
+        cursor.execute("""
+            SELECT id, camera_name, alert_type, description, timestamp, city, barangay, street, exact_location,
+                   brand, model, risk_level, is_read, from_latitude, from_longitude, photo
+            FROM camera_alerts
+            ORDER BY timestamp DESC
+        """)
+        alerts = []
+        for row in cursor.fetchall():
+            alerts.append({
+                "id": row[0],
+                "camera_name": row[1],
+                "alert_type": row[2],
+                "description": row[3],
+                "timestamp": row[4].strftime("%Y-%m-%d %H:%M:%S") if row[4] else "",
+                "city": row[5],
+                "barangay": row[6],
+                "street": row[7],
+                "exact_location": row[8],
+                "brand": row[9],
+                "model": row[10],
+                "risk_level": row[11],
+                "is_read": row[12],
+                "from_latitude": row[13],
+                "from_longitude": row[14],
+                "photo": row[15]
+            })
+        return alerts
+    except Exception as e:
+        print("Error in get_camera_alerts:", e)
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         conn.close()
