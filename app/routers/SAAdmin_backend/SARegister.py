@@ -1,11 +1,21 @@
 from fastapi import APIRouter
+from pydantic import BaseModel   # <-- ADD THIS LINE
 from app.routers.SAAdmin_backend.db_connection import db_manager
 
 router = APIRouter()
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    admin_key: str
+    photo: str = "policeman.png"
+
 @router.post("/superadmin/register")
-def superadmin_register(email: str, password: str, full_name: str, admin_key: str, photo: str = "policeman.png"):
-    success = db_manager.register_superadmin(email, password, full_name, admin_key, photo)
+def superadmin_register(data: RegisterRequest):
+    success = db_manager.register_superadmin(
+        data.email, data.password, data.full_name, data.admin_key, data.photo
+    )
     if success:
         return {"success": True, "message": "SuperAdmin registered successfully."}
     else:

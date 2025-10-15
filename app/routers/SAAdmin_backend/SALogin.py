@@ -11,6 +11,7 @@ class LoginRequest(BaseModel):
 
 @router.post("/superadmin/login")
 def superadmin_login(data: LoginRequest):
+    print("Login endpoint hit with:", data.email)
     result = db_manager.verify_superadmin_login(data.email, data.password)
     if result:
         return {"success": True, "id": result[0], "full_name": result[1], "photo": result[2]}
